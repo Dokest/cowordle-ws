@@ -99,5 +99,16 @@ io.on('connection', (socket) => {
 		});
 	});
 
+	socket.on('remove_player', (playerData: { roomCode: string, targetPlayerUuid: string, requestingPlayerUuid: string }) => {
+		const removed = setupService.removePlayer(playerData.roomCode, playerData.targetPlayerUuid, playerData.requestingPlayerUuid);
+
+		if (removed) {
+			io.to(playerData.roomCode).emit('player_disconnected', {
+				playerUuid: playerData.targetPlayerUuid,
+				reason: 'removed',
+			});
+		}
+	});
+
 	socket.emit('serverMessage', 'World!');
 });

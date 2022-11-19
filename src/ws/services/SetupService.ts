@@ -7,7 +7,9 @@ export class SetupService {
 	constructor(private readonly io: Server, private readonly database: Database) { }
 
 	async connectToRoom(socket: Socket, roomCode: string, playerName: string): Promise<void> {
-		const player = new Player(playerName);
+		const now = Date.now();
+
+		const player = new Player(playerName, now);
 
 		const room = this.database.getRoom(roomCode);
 
@@ -19,19 +21,38 @@ export class SetupService {
 
 		await socket.join(roomCode);
 
-		console.log(`Player '${playerName}' connected to room '${roomCode}'.`);
-
-		socket.emit('initial_local_info', {
-			uuid: player.uuid,
-		});
-
-		this.io.to(roomCode).emit('initial_room_info', {
+		socket.emit('setup', {
 			players: room.getPlayers(),
-			host: room.getHost(),
+			hostPlayer: room.getHost(),
+			localPlayer: player,
 		});
+
+		this.io.to(roomCode).emit('player_connected', {
+			newPlayer: player,
+		});
+
+		console.log(`Player '${playerName}' connected to room '${roomCode}'.`);
 	}
 
 	createRoom(roomCode: string): Room | null {
 		return this.database.createRoom(roomCode);
+	}
+
+	removePlayer(roomCode: string, targetPlayerUuid: string, requestingPlayerUuid: string): boolean {
+		const room = this.database.getRoom(roomCode);
+
+		if (!room || room.getHost()?.uuid !== requestingPlayerUuid) {
+			return false;
+		}
+
+		const player = room.getPlayers().find((player) => player.uuid === targetPlayerUuid);
+
+		if (!player) {
+			return false;
+		}
+
+		room.removePlayer(player);
+
+		return true;
 	}
 }
