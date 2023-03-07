@@ -1,12 +1,13 @@
-import { Server, Socket } from 'socket.io';
-import { Database } from '../../database/Database.js';
-import { Player } from '../../database/models/Player.js';
-import { Room } from '../../database/models/Room.js';
+import { Server } from "https://deno.land/x/socket_io@0.2.0/mod.ts";
+import { Database } from '../../database/Database.ts';
+import { Player } from '../../database/models/Player.ts';
+import { Room } from '../../database/models/Room.ts';
+
 
 export class SetupService {
 	constructor(private readonly io: Server, private readonly database: Database) { }
 
-	async connectToRoom(socket: Socket, roomCode: string, playerName: string): Promise<void> {
+	async connectToRoom(socket: any, roomCode: string, playerName: string): Promise<void> {
 		const now = Date.now();
 
 		const player = new Player(playerName, now);

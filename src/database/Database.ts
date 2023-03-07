@@ -1,4 +1,5 @@
-import { Room } from './models/Room.js';
+import { Room } from './models/Room.ts';
+
 
 export class Database {
 	private readonly MAX_ROOM_SIZE = 5;

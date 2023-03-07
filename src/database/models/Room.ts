@@ -1,4 +1,5 @@
-import { Player } from './Player.js';
+import { Player } from './Player.ts';
+
 
 export class Room {
 	private readonly MAX_PLAYERS = 5;

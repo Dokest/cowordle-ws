@@ -1,55 +1,12 @@
-import express, { Express, Request, Response } from 'express';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
-import { Database } from '../database/Database.js';
-import { SetupService } from '../ws/services/SetupService.js';
-import { validateWord, WordlePoints } from '../ws/services/WordleService.js';
+import { ConnInfo, serve } from "https://deno.land/std@0.178.0/http/server.ts";
+import { SocketServer } from "../../dependencies/socketio.deps.ts";
+import { createRoom } from "../actions/CreateRoom.ts";
+import { Database } from "../database/Database.ts";
+import { SetupService } from "../ws/services/SetupService.ts";
+import { validateWord, WordlePoints } from "../ws/services/WordleService.ts";
 
 
-const port = 9000;
-
-const app: Express = express();
-
-
-app.get('/', (req: Request, res: Response) => {
-	res.send('Express + TypeScript Server');
-});
-
-app.get('/create-room', (req: Request, res: Response) => {
-	const roomCode = req.query['code'];
-
-	if (typeof roomCode !== 'string') {
-		res.json({
-			error: 'invalid-argument-code',
-		});
-
-		return;
-	}
-
-	const created = setupService.createRoom(roomCode);
-
-	if (created) {
-		res.json({
-			data: {},
-		});
-
-		return;
-	}
-
-	res.status(500).json({
-		error: {}
-	});
-});
-
-const httpServer = createServer(app);
-
-httpServer.listen(port, () => {
-	console.log(`⚡️[server]: is running at http://localhost:${port}`);
-});
-
-
-//const wsServer = new WebsocketServer(httpServer);
-const io = new Server(httpServer, {
+const io = new SocketServer({
 	cors: {
 		origin: "http://localhost:5173",
 		methods: ["GET", "POST"],
@@ -57,9 +14,46 @@ const io = new Server(httpServer, {
 	},
 });
 
-const database = new Database();
 
-const setupService = new SetupService(io, database);
+
+// const port = 9000;
+
+// const app: Express = express();
+
+
+// app.get('/', (req: Request, res: Response) => {
+// 	res.send('Express + TypeScript Server');
+// });
+
+// app.get('/create-room', (req: Request, res: Response) => {
+// 	const roomCode = req.query['code'];
+
+// 	if (typeof roomCode !== 'string') {
+// 		res.json({
+// 			error: 'invalid-argument-code',
+// 		});
+
+// 		return;
+// 	}
+
+// 	const created = setupService.createRoom(roomCode);
+
+// 	if (created) {
+// 		res.json({
+// 			data: {},
+// 		});
+
+// 		return;
+// 	}
+
+// 	res.status(500).json({
+// 		error: {}
+// 	});
+// });
+
+export function generateString(length: number): string {
+	return (+new Date * Math.random()).toString(36).substring(0, length).toUpperCase();
+}
 
 
 io.on('connect_error', (err) => {
@@ -165,4 +159,25 @@ io.on('connection', (socket) => {
 	});
 
 	socket.emit('serverMessage', 'World!');
+});
+
+
+const database = new Database();
+
+const setupService = new SetupService(io, database);
+
+async function handle(request: Request, info: ConnInfo): Promise<Response> {
+	const url = new URLPattern(request.url);
+
+	if (url.pathname === '/create-room') {
+		const code = generateString(6);
+
+		return createRoom(code, setupService);
+	}
+
+	return await io.handler()(request, info);
+}
+
+await serve(handle, {
+	port: 9000,
 });

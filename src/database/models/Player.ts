@@ -1,5 +1,3 @@
-import crypto from "crypto";
-
 export class Player {
 	readonly uuid: string = '';
 
