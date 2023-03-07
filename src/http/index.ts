@@ -3,6 +3,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { Database } from '../database/Database.js';
 import { SetupService } from '../ws/services/SetupService.js';
+import { validateWord, WordlePoints } from '../ws/services/WordleService.js';
 
 
 const port = 9000;
@@ -108,6 +109,59 @@ io.on('connection', (socket) => {
 				reason: 'removed',
 			});
 		}
+	});
+
+	socket.on('validate_word', (inputs: { roomCode: string, playerUuid: string, word: string }) => {
+		const { playerUuid, roomCode, word } = inputs;
+		const room = database.getRoom(roomCode);
+
+		if (!room) {
+			// TODO: Handle ignore
+			console.error('[validate_word] Invalid room code');
+			return;
+		}
+
+		const player = room.getPlayers().find((player) => player.uuid === playerUuid);
+
+		if (!player) {
+			console.error('[validate_word] Invalid player uuid');
+			return;
+		}
+
+		const result = validateWord(word, room.getSolution());
+
+		const win = result.every((result) => result === WordlePoints.Exact);
+
+		if (win) {
+			console.log('PLAYER WON');
+
+			// TODO: Handle win
+		}
+
+		io.to(roomCode).emit('player_word', {
+			playerUuid: playerUuid,
+			result,
+		});
+
+		socket.emit('validate_word', {
+			result,
+		});
+	});
+
+	socket.on('start_game', (inputs: { playerUuid: string; roomCode: string; }) => {
+		const room = database.getRoom(inputs.roomCode);
+
+		if (!room) {
+			// TODO: Handle ignore
+			console.error('[validate_word] Invalid room code');
+			return;
+		}
+
+		// TODO: Check the player is the host!
+
+		console.log('START GAME REQUEST');
+
+		io.to(inputs.roomCode).emit('on_start_game');
 	});
 
 	socket.emit('serverMessage', 'World!');
