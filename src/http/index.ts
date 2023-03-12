@@ -183,5 +183,5 @@ async function handle(request: Request, info: ConnInfo): Promise<Response> {
 }
 
 await serve(handle, {
-	port: 9000,
+	port: parseInt(configData["WS_PORT"]),
 });
