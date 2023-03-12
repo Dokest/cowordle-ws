@@ -11,8 +11,9 @@ const webapp = configData["WEBAPP_ORIGIN"];
 
 const io = new SocketServer({
 	cors: {
-		origin: '*',
+		origin: webapp,
 		methods: ["GET", "POST"],
+		credentials: true,
 	},
 });
 
