@@ -1,3 +1,4 @@
+import { EN_WORDS } from '../../../static/en_words.ts';
 import { Player } from './Player.ts';
 
 
@@ -6,7 +7,7 @@ export class Room {
 
 	private players: Player[] = [];
 
-	private solution: string = 'beans'; //EN_WORDS.at(Math.random() * (EN_WORDS.length - 1))!;
+	private solution: string = EN_WORDS.at(Math.random() * (EN_WORDS.length - 1))!;
 
 	private host: Player | null = null;
 
