@@ -1,3 +1,4 @@
+import { load } from "https://deno.land/std/dotenv/mod.ts";
 import { ConnInfo, serve } from "https://deno.land/std@0.178.0/http/server.ts";
 import { SocketServer } from "../../dependencies/socketio.deps.ts";
 import { createRoom } from "../actions/CreateRoom.ts";
@@ -5,16 +6,16 @@ import { Database } from "../database/Database.ts";
 import { SetupService } from "../ws/services/SetupService.ts";
 import { validateWord, WordlePoints } from "../ws/services/WordleService.ts";
 
+const configData = await load();
+const webapp = configData["WEBAPP_ORIGIN"];
 
 const io = new SocketServer({
 	cors: {
-		origin: "http://localhost:5173",
+		origin: webapp,
 		methods: ["GET", "POST"],
 		credentials: true,
 	},
 });
-
-
 
 // const port = 9000;
 
