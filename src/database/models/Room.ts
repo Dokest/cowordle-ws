@@ -7,7 +7,7 @@ export class Room {
 
 	private players: Player[] = [];
 
-	private solution: string = EN_WORDS.at(Math.random() * (EN_WORDS.length - 1))!;
+	private solution: string = '';
 
 	private host: Player | null = null;
 
@@ -17,6 +17,10 @@ export class Room {
 		}
 
 		this.players = [...this.players, player];
+	}
+
+	rollWord(): void {
+		this.solution = EN_WORDS.at(Math.random() * (EN_WORDS.length - 1))!;
 	}
 
 	removePlayer(player: Player): void {

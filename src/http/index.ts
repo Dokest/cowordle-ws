@@ -157,7 +157,9 @@ io.on('connection', (socket) => {
 
 		// TODO: Check the player is the host!
 
-		console.log('START GAME REQUEST');
+		room.rollWord();
+
+		console.log(`START GAME REQUEST with solution: ${room.getSolution()}`);
 
 		io.to(inputs.roomCode).emit('on_start_game');
 	});
