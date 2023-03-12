@@ -133,6 +133,7 @@ io.on('connection', (socket) => {
 			// TODO: Handle win
 			io.to(roomCode).emit('player_win', {
 				playerUuid: playerUuid,
+				solution: room.getSolution(),
 			});
 		}
 
