@@ -18,6 +18,8 @@ export function createRoom(roomCode: string, setupService: SetupService): Respon
 		});
 	}
 
+	console.log(`> Solution: ${created.getSolution()}`);
+
 	return Response.json({
 		data: {
 			code: roomCode,

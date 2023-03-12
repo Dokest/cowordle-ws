@@ -6,13 +6,9 @@ export class Room {
 
 	private players: Player[] = [];
 
-	private solution: string = '';
+	private solution: string = 'beans'; //EN_WORDS.at(Math.random() * (EN_WORDS.length - 1))!;
 
 	private host: Player | null = null;
-
-	constructor(readonly roomCode: string) {
-		this.solution = 'tests';
-	}
 
 	addPlayer(player: Player): void {
 		if (this.players.length === 0) {

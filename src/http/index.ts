@@ -130,6 +130,9 @@ io.on('connection', (socket) => {
 			console.log('PLAYER WON');
 
 			// TODO: Handle win
+			io.to(roomCode).emit('player_win', {
+				playerUuid: playerUuid,
+			});
 		}
 
 		io.to(roomCode).emit('player_word', {

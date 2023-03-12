@@ -1,6 +1,7 @@
 {
   "tasks": {
     "run": "deno run --allow-net=0.0.0.0:9000 src/http/index.ts",
-    "dev": "deno run --allow-net=0.0.0.0:9000 --watch src/http/index.ts"
+    "dev": "deno run --allow-net=0.0.0.0:9000 --watch src/http/index.ts",
+    "test": "deno test tests"
   }
 }
