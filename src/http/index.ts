@@ -9,6 +9,8 @@ import { validateWord, WordlePoints } from "../ws/services/WordleService.ts";
 const configData = await load();
 const webapp = configData["WEBAPP_ORIGIN"];
 
+const START_MATCH_DELAY = 3000;
+
 const io = new SocketServer({
 	cors: {
 		origin: webapp,
@@ -152,7 +154,7 @@ io.on('connection', (socket) => {
 
 		if (!room) {
 			// TODO: Handle ignore
-			console.error('[validate_word] Invalid room code');
+			console.error('[start_game] Invalid room code');
 			return;
 		}
 
@@ -162,7 +164,14 @@ io.on('connection', (socket) => {
 
 		console.log(`START GAME REQUEST with solution: ${room.getSolution()}`);
 
-		io.to(inputs.roomCode).emit('on_start_game');
+		io.to(inputs.roomCode).emit('start_prematch', {
+			start_time: Date.now() + START_MATCH_DELAY,
+		});
+
+		setTimeout(() => {
+			io.to(inputs.roomCode).emit('on_start_game');
+		}, START_MATCH_DELAY);
+
 	});
 
 	socket.emit('serverMessage', 'World!');
