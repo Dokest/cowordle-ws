@@ -9,7 +9,7 @@ import { validateWord, WordlePoints } from "../ws/services/WordleService.ts";
 const configData = await load();
 const webapp = configData["WEBAPP_ORIGIN"];
 
-const START_MATCH_DELAY = 3000;
+const START_MATCH_DELAY = 4000;
 
 const io = new SocketServer({
 	cors: {
