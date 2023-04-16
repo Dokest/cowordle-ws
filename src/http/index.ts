@@ -4,7 +4,8 @@ import { SocketServer } from "../../dependencies/socketio.deps.ts";
 import { createRoom } from "../actions/CreateRoom.ts";
 import { Database } from "../database/Database.ts";
 import { SetupService } from "../ws/services/SetupService.ts";
-import { validateWord, WordlePoints } from "../ws/services/WordleService.ts";
+import { WordlePoints, validateWord } from "../ws/services/WordleService.ts";
+
 
 const configData = await load();
 const webapp = configData["WEBAPP_ORIGIN"];
@@ -14,7 +15,7 @@ const START_MATCH_DELAY = 4000;
 const io = new SocketServer({
 	cors: {
 		origin: webapp,
-		methods: ["GET", "POST"],
+		methods: ["GET", "POST", "OPTIONS"],
 		credentials: true,
 	},
 });
@@ -191,7 +192,7 @@ async function handle(request: Request, info: ConnInfo): Promise<Response> {
 		return createRoom(code, setupService);
 	}
 
-	return await io.handler()(request, info);
+	return io.handler()(request, info);
 }
 
 await serve(handle, {

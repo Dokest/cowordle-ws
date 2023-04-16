@@ -1,0 +1,16 @@
+version: "3.9"
+services:
+  webapp:
+    image: "lorwen/cowordle-webapp"
+    ports:
+      - 4173:4173
+    networks:
+      - inner-network
+  websockets:
+    image: "lorwen/cowordle-ws"
+    ports:
+      - 9000:9000
+    networks:
+      - inner-network
+networks:
+  inner-network:
