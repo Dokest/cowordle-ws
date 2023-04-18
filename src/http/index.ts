@@ -2,6 +2,7 @@ import { load } from "https://deno.land/std/dotenv/mod.ts";
 import { ConnInfo, serve } from "https://deno.land/std@0.178.0/http/server.ts";
 import { SocketServer } from "../../dependencies/socketio.deps.ts";
 import { createRoom } from "../actions/CreateRoom.ts";
+import { extractSocketData } from "../actions/SocketData.ts";
 import { Database } from "../database/Database.ts";
 import { SetupService } from "../ws/services/SetupService.ts";
 import { WordlePoints, validateWord } from "../ws/services/WordleService.ts";
@@ -20,40 +21,6 @@ const io = new SocketServer({
 	},
 });
 
-// const port = 9000;
-
-// const app: Express = express();
-
-
-// app.get('/', (req: Request, res: Response) => {
-// 	res.send('Express + TypeScript Server');
-// });
-
-// app.get('/create-room', (req: Request, res: Response) => {
-// 	const roomCode = req.query['code'];
-
-// 	if (typeof roomCode !== 'string') {
-// 		res.json({
-// 			error: 'invalid-argument-code',
-// 		});
-
-// 		return;
-// 	}
-
-// 	const created = setupService.createRoom(roomCode);
-
-// 	if (created) {
-// 		res.json({
-// 			data: {},
-// 		});
-
-// 		return;
-// 	}
-
-// 	res.status(500).json({
-// 		error: {}
-// 	});
-// });
 
 export function generateString(length: number): string {
 	return (+new Date * Math.random()).toString(36).substring(0, length).toUpperCase();
@@ -66,6 +33,21 @@ io.on('connect_error', (err) => {
 
 io.on('connection', (socket) => {
 	console.log(`CONNECTION:`, socket.id);
+
+	socket.on('disconnect', () => {
+		const socketData = extractSocketData(socket.data);
+
+		if (!socketData) {
+			return;
+		}
+
+		io.to(socketData.roomCode).emit('player_disconnected', {
+			playerUuid: socketData.playerUuid,
+			reason: 'disconnected',
+		});
+
+		console.log('DISCONNECT');
+	})
 
 	socket.on('message', (data) => {
 		console.log('Message received:', data);
@@ -80,8 +62,6 @@ io.on('connection', (socket) => {
 	});
 
 	socket.on('setup', (setupData: { roomCode: string; playerName: string; }) => {
-		console.log(setupData);
-
 		setupService.connectToRoom(socket, setupData.roomCode, setupData.playerName);
 	});
 
@@ -119,6 +99,11 @@ io.on('connection', (socket) => {
 			return;
 		}
 
+		if (room.getState() === 'LOBBY') {
+			console.error('[validate_word] Player trying to validate word in the incorrect room state');
+			return;
+		}
+
 		const player = room.getPlayers().find((player) => player.uuid === playerUuid);
 
 		if (!player) {
@@ -132,6 +117,7 @@ io.on('connection', (socket) => {
 
 		if (win) {
 			console.log('PLAYER WON');
+			room.setState('LOBBY');
 
 			// TODO: Handle win
 			io.to(roomCode).emit('player_win', {
@@ -160,7 +146,7 @@ io.on('connection', (socket) => {
 		}
 
 		// TODO: Check the player is the host!
-
+		room.setState('IN-GAME');
 		room.rollWord();
 
 		console.log(`START GAME REQUEST with solution: ${room.getSolution()}`);

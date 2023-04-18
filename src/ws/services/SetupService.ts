@@ -1,4 +1,5 @@
 import { Server } from "https://deno.land/x/socket_io@0.2.0/mod.ts";
+import { setSocketData } from "../../actions/SocketData.ts";
 import { Database } from '../../database/Database.ts';
 import { Player } from '../../database/models/Player.ts';
 import { Room } from '../../database/models/Room.ts';
@@ -22,10 +23,16 @@ export class SetupService {
 
 		await socket.join(roomCode);
 
+		setSocketData(socket, {
+			roomCode,
+			playerUuid: player.uuid,
+		});
+
 		socket.emit('setup', {
 			players: room.getPlayers(),
 			hostPlayer: room.getHost(),
 			localPlayer: player,
+			roomState: room.getState(),
 		});
 
 		this.io.to(roomCode).emit('player_connected', {

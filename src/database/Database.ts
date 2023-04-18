@@ -2,9 +2,7 @@ import { Room } from './models/Room.ts';
 
 
 export class Database {
-	private readonly MAX_ROOM_SIZE = 5;
-
-	private rooms: { [code: string]: Room } = {};
+	private rooms: Record<string, Room> = {};
 
 	createRoom(roomCode: string): Room | null {
 		const existingRoom = this.getRoom(roomCode);
@@ -13,7 +11,7 @@ export class Database {
 			return null;
 		}
 
-		const newRoom = new Room(roomCode);
+		const newRoom = new Room();
 		this.rooms[roomCode] = newRoom;
 
 		return newRoom;

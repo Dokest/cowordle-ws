@@ -1,7 +1,7 @@
 {
   "tasks": {
-    "run": "deno run --allow-net=0.0.0.0:9876,0.0.0.0:9000 --allow-env --allow-read=.env,.env.defaults,.env.example src/http/index.ts",
-    "dev": "deno run --allow-net=0.0.0.0:9876,0.0.0.0:9000 --allow-env --allow-read=.env,.env.defaults,.env.example --watch src/http/index.ts",
+    "run": "deno run --check --allow-net=0.0.0.0:9876,0.0.0.0:9000 --allow-env --allow-read=.env,.env.defaults,.env.example src/http/index.ts",
+    "dev": "deno run --check --allow-net=0.0.0.0:9876,0.0.0.0:9000 --allow-env --allow-read=.env,.env.defaults,.env.example --watch src/http/index.ts",
     "test": "deno test tests"
   }
 }

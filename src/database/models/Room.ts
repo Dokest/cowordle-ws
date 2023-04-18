@@ -2,14 +2,19 @@ import { EN_WORDS } from '../../../static/en_words.ts';
 import { Player } from './Player.ts';
 
 
+export type RoomStates = 'LOBBY' | 'IN-GAME';
+
+
 export class Room {
 	private readonly MAX_PLAYERS = 5;
 
 	private players: Player[] = [];
 
-	private solution: string = '';
+	private solution = '';
 
 	private host: Player | null = null;
+
+	private state: RoomStates = 'LOBBY';
 
 	addPlayer(player: Player): void {
 		if (this.players.length === 0) {
@@ -46,5 +51,13 @@ export class Room {
 
 	getSolution(): string {
 		return this.solution;
+	}
+
+	setState(state: RoomStates): void {
+		this.state = state;
+	}
+
+	getState(): RoomStates {
+		return this.state;
 	}
 }
