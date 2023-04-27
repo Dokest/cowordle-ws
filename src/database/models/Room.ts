@@ -16,6 +16,8 @@ export class Room {
 
 	private state: RoomStates = 'LOBBY';
 
+	static MAX_WORDS = 6;
+
 	addPlayer(player: Player): void {
 		if (this.players.length === 0) {
 			this.host = player;
@@ -35,6 +37,12 @@ export class Room {
 		// 	}
 		// }
 		this.players = this.players.filter((existingPlayer) => existingPlayer.name !== player.name);
+	}
+
+	resetPlayerScores(): void {
+		this.players.forEach((player) => {
+			player.wordTries = [];
+		});
 	}
 
 	hasEmptySpaces(): boolean {

@@ -4,6 +4,7 @@ import { SocketServer } from "../../dependencies/socketio.deps.ts";
 import { createRoom } from "../actions/CreateRoom.ts";
 import { extractSocketData } from "../actions/SocketData.ts";
 import { Database } from "../database/Database.ts";
+import { Room } from "../database/models/Room.ts";
 import { SetupService } from "../ws/services/SetupService.ts";
 import { WordlePoints, validateWord } from "../ws/services/WordleService.ts";
 
@@ -40,6 +41,8 @@ io.on('connection', (socket) => {
 		if (!socketData) {
 			return;
 		}
+
+		socket.data = {};
 
 		io.to(socketData.roomCode).emit('player_disconnected', {
 			playerUuid: socketData.playerUuid,
@@ -89,8 +92,15 @@ io.on('connection', (socket) => {
 		}
 	});
 
-	socket.on('validate_word', (inputs: { roomCode: string, playerUuid: string, word: string }) => {
-		const { playerUuid, roomCode, word } = inputs;
+	socket.on('validate_word', (inputs: { word: string }) => {
+		const { word } = inputs;
+		const socketData = extractSocketData(socket.data);
+
+		if (!socketData) {
+			return;
+		}
+
+		const { playerUuid, roomCode } = socketData;
 		const room = database.getRoom(roomCode);
 
 		if (!room) {
@@ -111,7 +121,14 @@ io.on('connection', (socket) => {
 			return;
 		}
 
+		if (player.wordTries.length === Room.MAX_WORDS) {
+			console.log('[validate_word] Max word tries reached', `${player.wordTries.length} / ${Room.MAX_WORDS}`);
+			return;
+		}
+
 		const result = validateWord(word, room.getSolution());
+
+		player.addWord(word, result);
 
 		const win = result.every((result) => result === WordlePoints.Exact);
 
@@ -146,13 +163,18 @@ io.on('connection', (socket) => {
 		}
 
 		// TODO: Check the player is the host!
+		room.resetPlayerScores();
 		room.setState('IN-GAME');
 		room.rollWord();
 
 		console.log(`START GAME REQUEST with solution: ${room.getSolution()}`);
 
+		const startMatchDelay = room.getPlayers().length === 1
+			? null
+			: Date.now() + START_MATCH_DELAY;
+
 		io.to(inputs.roomCode).emit('start_prematch', {
-			start_time: Date.now() + START_MATCH_DELAY,
+			start_time: startMatchDelay,
 		});
 
 		setTimeout(() => {
