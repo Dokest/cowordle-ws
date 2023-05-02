@@ -5,8 +5,15 @@ export class Player {
 
 	wordTries: { word: string, result: WordlePoints[] }[] = [];
 
+	knownLetters: Array<WordlePoints | null>;
+
 	constructor(public name: string, readonly connectionTimestamp: number, uuid?: string) {
 		this.uuid = uuid || crypto.randomUUID();
+
+		this.knownLetters = [];
+		this.knownLetters.length = 5;
+
+		this.reset();
 	}
 
 	addWord(word: string, result: WordlePoints[]): void {
@@ -14,5 +21,25 @@ export class Player {
 			...this.wordTries,
 			{ word, result },
 		];
+
+		result.forEach((letterResult, index) => {
+			if (letterResult !== this.knownLetters[index]) {
+				const bestResult = this.knownLetters[index] === null || letterResult > this.knownLetters[index]!
+					? letterResult
+					: this.knownLetters[index];
+
+				this.knownLetters[index] = bestResult;
+			}
+		});
+	}
+
+	getKnownLetters(): Array<WordlePoints | null> {
+		return this.knownLetters;
+	}
+
+	reset(): void {
+		this.wordTries = [];
+
+		this.knownLetters = this.knownLetters.fill(null, 0, 5);
 	}
 }

@@ -143,13 +143,15 @@ io.on('connection', (socket) => {
 			});
 		}
 
-		io.to(roomCode).emit('player_word', {
-			playerUuid: playerUuid,
-			result,
-		});
+		const accumulatedResult = player.getKnownLetters();
 
 		socket.emit('validate_word', {
 			result,
+		});
+
+		io.to(roomCode).emit('player_word', {
+			playerUuid: playerUuid,
+			result: accumulatedResult,
 		});
 	});
 
