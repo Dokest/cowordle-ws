@@ -41,7 +41,7 @@ export class Room {
 
 	resetPlayerScores(): void {
 		this.players.forEach((player) => {
-			player.wordTries = [];
+			player.reset();
 		});
 	}
 
