@@ -1,6 +1,7 @@
 import { load } from "https://deno.land/std/dotenv/mod.ts";
 import { ConnInfo, serve } from "https://deno.land/std@0.178.0/http/server.ts";
 import { SocketServer } from "../../dependencies/socketio.deps.ts";
+import { checkLostMatch } from "../actions/CheckLostMatch.ts";
 import { createRoom } from "../actions/CreateRoom.ts";
 import { extractSocketData } from "../actions/SocketData.ts";
 import { Database } from "../database/Database.ts";
@@ -103,6 +104,8 @@ io.on('connection', (socket) => {
 		const { playerUuid, roomCode } = socketData;
 		const room = database.getRoom(roomCode);
 
+		console.log(socketData);
+
 		if (!room) {
 			// TODO: Handle ignore
 			console.error('[validate_word] Invalid room code');
@@ -139,6 +142,11 @@ io.on('connection', (socket) => {
 			// TODO: Handle win
 			io.to(roomCode).emit('player_win', {
 				playerUuid: playerUuid,
+				solution: room.getSolution(),
+			});
+		} else if (checkLostMatch(room, 6)) {
+			socket.emit('player_win', {
+				playerUuid: null,
 				solution: room.getSolution(),
 			});
 		}
