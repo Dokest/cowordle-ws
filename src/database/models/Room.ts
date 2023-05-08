@@ -1,4 +1,5 @@
 import { EN_WORDS } from '../../../static/en_words.ts';
+import { ES_WORDS } from '../../../static/es_words.ts';
 import { Player } from './Player.ts';
 
 
@@ -18,6 +19,8 @@ export class Room {
 
 	static MAX_WORDS = 6;
 
+	private wordListId = 'en_words';
+
 	addPlayer(player: Player): void {
 		if (this.players.length === 0) {
 			this.host = player;
@@ -27,7 +30,18 @@ export class Room {
 	}
 
 	rollWord(): void {
-		this.solution = EN_WORDS.at(Math.random() * (EN_WORDS.length - 1))!;
+		let list: string[];
+
+		switch (this.wordListId) {
+			case "es_words":
+				list = ES_WORDS;
+				break;
+			default:
+				list = EN_WORDS;
+				break;
+		}
+
+		this.solution = list.at(Math.random() * (EN_WORDS.length - 1))!;
 	}
 
 	removePlayer(player: Player): void {
@@ -67,5 +81,13 @@ export class Room {
 
 	getState(): RoomStates {
 		return this.state;
+	}
+
+	setWordListId(wordListId: string): void {
+		this.wordListId = wordListId;
+	}
+
+	getWordListId(): string {
+		return this.wordListId;
 	}
 }

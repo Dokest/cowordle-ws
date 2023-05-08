@@ -65,8 +65,8 @@ io.on('connection', (socket) => {
 		socket.emit('ping');
 	});
 
-	socket.on('setup', (setupData: { roomCode: string; playerName: string; }) => {
-		setupService.connectToRoom(socket, setupData.roomCode, setupData.playerName);
+	socket.on('setup', async (setupData: { roomCode: string; playerName: string; }) => {
+		await setupService.connectToRoom(socket, setupData.roomCode, setupData.playerName);
 	});
 
 	socket.on('update_player_name', (playerData: { uuid: string; roomCode: string; newPlayerName: string }) => {
@@ -163,8 +163,14 @@ io.on('connection', (socket) => {
 		});
 	});
 
-	socket.on('start_game', (inputs: { playerUuid: string; roomCode: string; }) => {
-		const room = database.getRoom(inputs.roomCode);
+	socket.on('start_game', (inputs: { wordListId: string }) => {
+		const socketData = extractSocketData(socket.data);
+
+		if (!socketData) {
+			return;
+		}
+
+		const room = database.getRoom(socketData.roomCode);
 
 		if (!room) {
 			// TODO: Handle ignore
@@ -174,8 +180,9 @@ io.on('connection', (socket) => {
 
 		// TODO: Check the player is the host!
 		room.resetPlayerScores();
-		room.setState('IN-GAME');
+		room.setWordListId(inputs.wordListId);
 		room.rollWord();
+		room.setState('IN-GAME');
 
 		console.log(`START GAME REQUEST with solution: ${room.getSolution()}`);
 
@@ -183,12 +190,13 @@ io.on('connection', (socket) => {
 			? null
 			: Date.now() + START_MATCH_DELAY;
 
-		io.to(inputs.roomCode).emit('start_prematch', {
-			start_time: startMatchDelay,
+		io.to(socketData.roomCode).emit('start_prematch', {
+			startTime: startMatchDelay,
+			wordListId: room.getWordListId(),
 		});
 
 		setTimeout(() => {
-			io.to(inputs.roomCode).emit('on_start_game');
+			io.to(socketData.roomCode).emit('on_start_game');
 		}, START_MATCH_DELAY);
 
 	});
