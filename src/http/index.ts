@@ -11,13 +11,13 @@ import { WordlePoints, validateWord } from "../ws/services/WordleService.ts";
 
 
 const configData = await load();
-const webapp = configData["WEBAPP_ORIGIN"];
+const webappPort = configData["WEBAPP_PORT"];
 
 const START_MATCH_DELAY = 4000;
 
 const io = new SocketServer({
 	cors: {
-		origin: webapp,
+		origin: `http://localhost:${webappPort}`,
 		methods: ["GET", "POST", "OPTIONS"],
 		credentials: true,
 	},
@@ -44,6 +44,8 @@ io.on('connection', (socket) => {
 		}
 
 		socket.data = {};
+
+		database.getRoom(socketData.roomCode)?.removePlayer(socketData.playerUuid);
 
 		io.to(socketData.roomCode).emit('player_disconnected', {
 			playerUuid: socketData.playerUuid,

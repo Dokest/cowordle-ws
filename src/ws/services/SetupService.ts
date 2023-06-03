@@ -59,7 +59,7 @@ export class SetupService {
 			return false;
 		}
 
-		room.removePlayer(player);
+		room.removePlayer(player.uuid);
 
 		return true;
 	}

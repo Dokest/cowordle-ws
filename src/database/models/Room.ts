@@ -44,13 +44,13 @@ export class Room {
 		this.solution = list.at(Math.random() * (EN_WORDS.length - 1))!;
 	}
 
-	removePlayer(player: Player): void {
+	removePlayer(playerUuid: string): void {
 		// for (const existingPlayer of this.players) {
 		// 	if (existingPlayer.name === player.name) {
 		// 		// TODO: Remove player
 		// 	}
 		// }
-		this.players = this.players.filter((existingPlayer) => existingPlayer.name !== player.name);
+		this.players = this.players.filter((existingPlayer) => existingPlayer.uuid !== playerUuid);
 	}
 
 	resetPlayerScores(): void {
