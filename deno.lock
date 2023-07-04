@@ -54,6 +54,7 @@
     "https://deno.land/std@0.179.0/collections/filter_values.ts": "5b9feaf17b9a6e5ffccdd36cf6f38fa4ffa94cff2602d381c2ad0c2a97929652",
     "https://deno.land/std@0.179.0/collections/without_all.ts": "a89f5da0b5830defed4f59666e188df411d8fece35a5f6ca69be6ca71a95c185",
     "https://deno.land/std@0.179.0/dotenv/mod.ts": "8dcbc8a40b896a0bf094582aaeadbfc76d3528872faf2efc0302beb1d2f6afd0",
+    "https://deno.land/x/local_ip@0.0.3/mod.ts": "8c5ebbca332af704f39cf83aac68cceff9f2afe1dc42e8a10dfe53bf8d347ae9",
     "https://deno.land/x/socket_io@0.1.1/deps.ts": "136b3fc7c55f2a06a367965da3395f1bf7de66d36a0d91c5f795084fa8c67ab3",
     "https://deno.land/x/socket_io@0.1.1/mod.ts": "cc52c1f6fc1a647d7ac62d22d3125063cc598e8b291b14c0d51dc66c722afb9b",
     "https://deno.land/x/socket_io@0.1.1/packages/engine.io-parser/base64-arraybuffer.ts": "57ccea6679609df5416159fcc8a47936ad28ad6fe32235ef78d9223a3a823407",

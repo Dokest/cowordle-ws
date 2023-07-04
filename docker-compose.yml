@@ -1,13 +1,17 @@
 version: "3.9"
 services:
   webapp:
-    image: "lorwen/cowordle-webapp"
+    image: "lorwen/cowordle-webapp:latest"
     ports:
       - 4173:4173
     networks:
       - inner-network
+    environment:
+      - PUBLIC_WEBSOCKET_URL=OKTETO_BUILD_WEBSOCKETS_REGISTRY
+    depends_on:
+      - websockets
   websockets:
-    image: "lorwen/cowordle-ws"
+    image: "lorwen/cowordle-ws:latest"
     ports:
       - 9000:9000
     networks:

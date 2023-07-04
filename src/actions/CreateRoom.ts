@@ -10,6 +10,8 @@ export function createRoom(roomCode: string, setupService: SetupService): Respon
 
 	const created = setupService.createRoom(roomCode);
 
+	console.log('ROOM CREATED: ', !!created);
+
 	if (!created) {
 		return Response.json({
 			error: {}

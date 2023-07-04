@@ -11,7 +11,7 @@ import { WordlePoints, validateWord } from "../ws/services/WordleService.ts";
 
 
 const configData = await load();
-const webappPort = configData["WEBAPP_PORT"];
+const webappPort = parseInt(configData["WEBAPP_PORT"]);
 
 const START_MATCH_DELAY = 4000;
 
@@ -45,7 +45,26 @@ io.on('connection', (socket) => {
 
 		socket.data = {};
 
-		database.getRoom(socketData.roomCode)?.removePlayer(socketData.playerUuid);
+		const room = database.getRoom(socketData.roomCode);
+
+		if (!room) {
+			return;
+		}
+
+		const hostUuid = room.getHost()?.uuid || '';
+		// Remove all players from match
+		if (hostUuid === socketData.playerUuid) {
+			room.getPlayers().forEach((player) => {
+				io.to(socketData.roomCode).emit('player_disconnected', {
+					playerUuid: player,
+					reason: 'room_closed',
+				});
+			});
+
+			return;
+		}
+
+		room.removePlayer(socketData.playerUuid);
 
 		io.to(socketData.roomCode).emit('player_disconnected', {
 			playerUuid: socketData.playerUuid,
@@ -141,7 +160,6 @@ io.on('connection', (socket) => {
 			console.log('PLAYER WON');
 			room.setState('LOBBY');
 
-			// TODO: Handle win
 			io.to(roomCode).emit('player_win', {
 				playerUuid: playerUuid,
 				solution: room.getSolution(),
@@ -175,12 +193,16 @@ io.on('connection', (socket) => {
 		const room = database.getRoom(socketData.roomCode);
 
 		if (!room) {
-			// TODO: Handle ignore
 			console.error('[start_game] Invalid room code');
 			return;
 		}
 
-		// TODO: Check the player is the host!
+		// Check the player is the host
+		if (room.getHost()?.uuid !== socketData.playerUuid) {
+			console.error('[start_game] Invalid user request to start the match');
+			return;
+		}
+
 		room.resetPlayerScores();
 		room.setWordListId(inputs.wordListId);
 		room.rollWord();
@@ -211,13 +233,36 @@ const database = new Database();
 
 const setupService = new SetupService(io, database);
 
+const routes: Record<string, (request: Request) => Response | Promise<Response>> = {
+	'/create-room': () => {
+		const code = generateString(6);
+
+		console.log('Creating new room with CODE: ', code);
+
+		return createRoom(code, setupService);
+	},
+	'/testing/solution': async (request: Request): Promise<Response> => {
+		console.log(request);
+
+		const req = await request.json();
+
+		const roomCode = req.roomCode;
+
+		const room = database.getRoom(roomCode);
+
+		return Response.json({
+			solution: room?.getSolution(),
+		});
+	},
+}
+
 async function handle(request: Request, info: ConnInfo): Promise<Response> {
 	const url = new URLPattern(request.url);
 
-	if (url.pathname === '/create-room') {
-		const code = generateString(6);
+	console.log('WS Request received!', JSON.stringify({ request, info }));
 
-		return createRoom(code, setupService);
+	if (url.pathname in routes) {
+		return routes[url.pathname](request);
 	}
 
 	return io.handler()(request, info);
@@ -226,3 +271,4 @@ async function handle(request: Request, info: ConnInfo): Promise<Response> {
 await serve(handle, {
 	port: parseInt(configData["WS_PORT"]),
 });
+

@@ -67,6 +67,10 @@ export class Room {
 		return this.players;
 	}
 
+	findPlayer(targetUuid: string): Player | undefined {
+		return this.getPlayers().find((player) => player.uuid === targetUuid);
+	}
+
 	getHost(): Player | null {
 		return this.host;
 	}
