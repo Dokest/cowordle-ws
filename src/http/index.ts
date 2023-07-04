@@ -17,7 +17,7 @@ const START_MATCH_DELAY = 4000;
 
 const io = new SocketServer({
 	cors: {
-		origin: `http://localhost:${webappPort}`,
+		origin: [`http://localhost:${webappPort}`, `https://webapp-dokest.cloud.okteto.net`],
 		methods: ["GET", "POST", "OPTIONS"],
 		credentials: true,
 	},
