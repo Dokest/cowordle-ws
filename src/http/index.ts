@@ -10,14 +10,23 @@ import { SetupService } from "../ws/services/SetupService.ts";
 import { WordlePoints, validateWord } from "../ws/services/WordleService.ts";
 
 
-const configData = await load();
-const webappPort = parseInt(configData["WEBAPP_PORT"]);
+const configData = await load({ export: true });
+const webappPort = parseInt(Deno.env.get("WEBAPP_PORT") || '');
+const externalWebappDomain = Deno.env.get("WEBAPP_EXTERNAL_PORT");
+
+const corsAllowedDomains = [
+	`http://localhost:${webappPort}`,
+];
+
+if (externalWebappDomain) {
+	corsAllowedDomains.push(externalWebappDomain);
+}
 
 const START_MATCH_DELAY = 4000;
 
 const io = new SocketServer({
 	cors: {
-		origin: [`http://localhost:${webappPort}`, `https://webapp-dokest.cloud.okteto.net`],
+		origin: corsAllowedDomains,
 		methods: ["GET", "POST", "OPTIONS"],
 		credentials: true,
 	},
@@ -43,6 +52,9 @@ io.on('connection', (socket) => {
 			return;
 		}
 
+		console.log(`Player [${socketData.playerUuid}] disconnected.`);
+
+		// Cleanup socket data, as is no longer in use
 		socket.data = {};
 
 		const room = database.getRoom(socketData.roomCode);
@@ -51,27 +63,37 @@ io.on('connection', (socket) => {
 			return;
 		}
 
-		const hostUuid = room.getHost()?.uuid || '';
-		// Remove all players from match
-		if (hostUuid === socketData.playerUuid) {
-			room.getPlayers().forEach((player) => {
-				io.to(socketData.roomCode).emit('player_disconnected', {
-					playerUuid: player,
-					reason: 'room_closed',
-				});
-			});
+		room.removePlayer(socketData.playerUuid);
+
+		if (room.getPlayers().length === 0) {
+			database.destroyRoom(socketData.roomCode);
+
+			console.log(`Destroying room [${socketData.roomCode}] as is empty`);
 
 			return;
 		}
 
-		room.removePlayer(socketData.playerUuid);
+		// Migrate host
+		const hostUuid = room.getHost()?.uuid;
+
+		if (hostUuid === socketData.playerUuid) {
+			console.log(`Migrating host for room ${socketData.roomCode}.`);
+
+			const newHost = room.getPlayers().at(0)!;
+
+			room.setHost(newHost);
+
+			io.to(socketData.roomCode).emit('change_host', {
+				hostUuid: newHost.uuid,
+			});
+
+			console.log(`Migrated host for room ${socketData.roomCode} from [${hostUuid}] to [${newHost.uuid}].`);
+		}
 
 		io.to(socketData.roomCode).emit('player_disconnected', {
 			playerUuid: socketData.playerUuid,
 			reason: 'disconnected',
 		});
-
-		console.log('DISCONNECT');
 	})
 
 	socket.on('message', (data) => {
@@ -125,8 +147,6 @@ io.on('connection', (socket) => {
 		const { playerUuid, roomCode } = socketData;
 		const room = database.getRoom(roomCode);
 
-		console.log(socketData);
-
 		if (!room) {
 			// TODO: Handle ignore
 			console.error('[validate_word] Invalid room code');
@@ -150,14 +170,17 @@ io.on('connection', (socket) => {
 			return;
 		}
 
-		const result = validateWord(word, room.getSolution());
+		console.log(`Player [${playerUuid}] trying word "${word}. The solution is ${room.getSolution()}"`);
+
+		const result = validateWord(word.toUpperCase(), room.getSolution().toUpperCase());
 
 		player.addWord(word, result);
 
 		const win = result.every((result) => result === WordlePoints.Exact);
 
 		if (win) {
-			console.log('PLAYER WON');
+			console.log(`Player [${socketData.playerUuid}] won.`);
+
 			room.setState('LOBBY');
 
 			io.to(roomCode).emit('player_win', {
@@ -165,7 +188,9 @@ io.on('connection', (socket) => {
 				solution: room.getSolution(),
 			});
 		} else if (checkLostMatch(room, 6)) {
-			socket.emit('player_win', {
+			console.log(`All players in room [${socketData.roomCode}] lost`);
+
+			io.to(roomCode).emit('player_win', {
 				playerUuid: null,
 				solution: room.getSolution(),
 			});
@@ -258,8 +283,6 @@ const routes: Record<string, (request: Request) => Response | Promise<Response>>
 
 async function handle(request: Request, info: ConnInfo): Promise<Response> {
 	const url = new URLPattern(request.url);
-
-	console.log('WS Request received!', JSON.stringify({ request, info }));
 
 	if (url.pathname in routes) {
 		return routes[url.pathname](request);

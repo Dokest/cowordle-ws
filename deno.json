@@ -2,6 +2,7 @@
   "tasks": {
     "run": "deno run --allow-net=0.0.0.0:9876,0.0.0.0:9000 --allow-env --allow-sys --allow-read=.env,.env.defaults,.env.example --allow-run=ifconfig src/http/index.ts",
     "dev": "deno run --watch --check --allow-net=0.0.0.0:9876,0.0.0.0:9000 --allow-env --allow-sys --allow-read=.env,.env.defaults,.env.example --allow-run=ifconfig src/http/index.ts",
-    "test": "deno test tests"
+    "test": "deno test tests",
+    "docker:push": "docker build -t lorwen/cowordle-ws:latest . && docker push lorwen/cowordle-ws:latest"
   }
 }

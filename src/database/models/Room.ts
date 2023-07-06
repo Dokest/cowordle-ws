@@ -21,6 +21,7 @@ export class Room {
 
 	private wordListId = 'en_words';
 
+
 	addPlayer(player: Player): void {
 		if (this.players.length === 0) {
 			this.host = player;
@@ -28,6 +29,7 @@ export class Room {
 
 		this.players = [...this.players, player];
 	}
+
 
 	rollWord(): void {
 		let list: string[];
@@ -41,8 +43,9 @@ export class Room {
 				break;
 		}
 
-		this.solution = list.at(Math.random() * (EN_WORDS.length - 1))!;
+		this.solution = list.at(Math.random() * (list.length - 1))!;
 	}
+
 
 	removePlayer(playerUuid: string): void {
 		// for (const existingPlayer of this.players) {
@@ -53,43 +56,59 @@ export class Room {
 		this.players = this.players.filter((existingPlayer) => existingPlayer.uuid !== playerUuid);
 	}
 
+
+	setHost(player: Player): void {
+		this.host = player;
+	}
+
+
 	resetPlayerScores(): void {
 		this.players.forEach((player) => {
 			player.reset();
 		});
 	}
 
+
 	hasEmptySpaces(): boolean {
-		return this.players.length < this.MAX_PLAYERS;
+		return true;
+		// return this.players.length < this.MAX_PLAYERS;
 	}
+
 
 	getPlayers(): Player[] {
 		return this.players;
 	}
 
+
 	findPlayer(targetUuid: string): Player | undefined {
 		return this.getPlayers().find((player) => player.uuid === targetUuid);
 	}
+
 
 	getHost(): Player | null {
 		return this.host;
 	}
 
+
 	getSolution(): string {
 		return this.solution;
 	}
+
 
 	setState(state: RoomStates): void {
 		this.state = state;
 	}
 
+
 	getState(): RoomStates {
 		return this.state;
 	}
 
+
 	setWordListId(wordListId: string): void {
 		this.wordListId = wordListId;
 	}
+
 
 	getWordListId(): string {
 		return this.wordListId;
