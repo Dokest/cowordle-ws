@@ -7,6 +7,8 @@ export class Player {
 
 	knownLetters: Array<WordlePoints | null>;
 
+	isPlayingThisMatch = false;
+
 	constructor(public name: string, readonly connectionTimestamp: number, uuid?: string) {
 		this.uuid = uuid || crypto.randomUUID();
 

@@ -39,7 +39,7 @@ export class SetupService {
 			newPlayer: player,
 		});
 
-		console.log(`Player '${playerName}' connected to room '${roomCode}'.`);
+		console.log(`Player [${playerName}, ${player.uuid}] connected to room '${roomCode}'.`);
 	}
 
 	createRoom(roomCode: string): Room | null {

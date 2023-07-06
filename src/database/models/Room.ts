@@ -28,6 +28,8 @@ export class Room {
 		}
 
 		this.players = [...this.players, player];
+
+		player.isPlayingThisMatch = false;
 	}
 
 
@@ -65,7 +67,9 @@ export class Room {
 	resetPlayerScores(): void {
 		this.players.forEach((player) => {
 			player.reset();
+			player.isPlayingThisMatch = true;
 		});
+
 	}
 
 
