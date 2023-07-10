@@ -12,7 +12,7 @@ import { WordlePoints, validateWord } from "../ws/services/WordleService.ts";
 
 const configData = await load({ export: true });
 const webappPort = parseInt(Deno.env.get("WEBAPP_PORT") || '');
-const externalWebappDomain = Deno.env.get("WEBAPP_EXTERNAL_PORT");
+const externalWebappDomain = Deno.env.get("WEBAPP_EXTERNAL_URL");
 
 const corsAllowedDomains = [
 	`http://localhost:${webappPort}`,
@@ -43,16 +43,18 @@ io.on('connect_error', (err) => {
 });
 
 io.on('connection', (socket) => {
-	console.log(`CONNECTION:`, socket.id);
+	console.log(`New connection:`, socket.id);
 
-	socket.on('disconnect', () => {
+	socket.on('disconnect', (reason) => {
+		console.log('> Before disconnect', reason);
+
 		const socketData = extractSocketData(socket.data);
 
 		if (!socketData) {
 			return;
 		}
 
-		console.log(`Player [${socketData.playerUuid}] disconnected.`);
+		console.log(`Player [${socketData.playerUuid}] disconnected. Reason: ${JSON.stringify(reason)}`);
 
 		// Cleanup socket data, as is no longer in use
 		socket.data = {};
@@ -102,17 +104,19 @@ io.on('connection', (socket) => {
 		socket.emit('message', `Server replies: ${data}`);
 	});
 
-	socket.on('ping', (data) => {
-		console.log('Received ping from:', socket.id);
-
-		socket.emit('ping');
+	socket.on('heartbeat_keepalive', () => {
+		socket.emit('heartbeat_keepalive');
 	});
 
 	socket.on('setup', async (setupData: { roomCode: string; playerName: string; }) => {
+		console.log('> Before SETUP');
+
 		await setupService.connectToRoom(socket, setupData.roomCode, setupData.playerName);
 	});
 
 	socket.on('update_player_name', (playerData: { uuid: string; roomCode: string; newPlayerName: string }) => {
+		console.log('> Before update_player_name', playerData);
+
 		const player = database.getRoom(playerData.roomCode)?.getPlayers().find((player) => player.uuid === playerData.uuid);
 
 		if (player) {
@@ -126,6 +130,8 @@ io.on('connection', (socket) => {
 	});
 
 	socket.on('remove_player', (playerData: { roomCode: string, targetPlayerUuid: string, requestingPlayerUuid: string }) => {
+		console.log('> Before remove_player', playerData);
+
 		const removed = setupService.removePlayer(playerData.roomCode, playerData.targetPlayerUuid, playerData.requestingPlayerUuid);
 
 		if (removed) {
@@ -137,6 +143,8 @@ io.on('connection', (socket) => {
 	});
 
 	socket.on('validate_word', (inputs: { word: string }) => {
+		console.log('> Before validate_word', inputs);
+
 		const { word } = inputs;
 		const socketData = extractSocketData(socket.data);
 
@@ -209,6 +217,8 @@ io.on('connection', (socket) => {
 	});
 
 	socket.on('start_game', (inputs: { wordListId: string }) => {
+		console.log('> Before start_game', inputs);
+
 		const socketData = extractSocketData(socket.data);
 
 		if (!socketData) {

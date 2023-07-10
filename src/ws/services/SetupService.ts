@@ -1,4 +1,4 @@
-import { Server } from "https://deno.land/x/socket_io@0.2.0/mod.ts";
+import { SocketServer } from "../../../dependencies/socketio.deps.ts";
 import { setSocketData } from "../../actions/SocketData.ts";
 import { Database } from '../../database/Database.ts';
 import { Player } from '../../database/models/Player.ts';
@@ -6,7 +6,7 @@ import { Room } from '../../database/models/Room.ts';
 
 
 export class SetupService {
-	constructor(private readonly io: Server, private readonly database: Database) { }
+	constructor(private readonly io: SocketServer, private readonly database: Database) { }
 
 	async connectToRoom(socket: any, roomCode: string, playerName: string): Promise<void> {
 		const now = Date.now();
