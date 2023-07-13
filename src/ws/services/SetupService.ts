@@ -8,10 +8,8 @@ import { Room } from '../../database/models/Room.ts';
 export class SetupService {
 	constructor(private readonly io: SocketServer, private readonly database: Database) { }
 
-	async connectToRoom(socket: any, roomCode: string, playerName: string): Promise<void> {
+	async connectToRoom(socket: any, roomCode: string, playerName: string, playerUuid: string | undefined): Promise<void> {
 		const now = Date.now();
-
-		const player = new Player(playerName, now);
 
 		const room = this.database.getRoom(roomCode);
 
@@ -19,7 +17,13 @@ export class SetupService {
 			return;
 		}
 
-		room.addPlayer(player);
+		const reusePlayer = room.findPlayer(playerUuid || '');
+
+		const player = reusePlayer || new Player(playerName, now, playerUuid);
+
+		if (!playerUuid) {
+			room.addPlayer(player);
+		}
 
 		await socket.join(roomCode);
 
@@ -34,6 +38,7 @@ export class SetupService {
 			localPlayer: player,
 			roomState: room.getState(),
 		});
+
 
 		this.io.to(roomCode).emit('player_connected', {
 			newPlayer: player,
@@ -59,7 +64,7 @@ export class SetupService {
 			return false;
 		}
 
-		room.removePlayer(player.uuid);
+		room.removePlayer(player);
 
 		return true;
 	}

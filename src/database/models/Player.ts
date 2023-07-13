@@ -1,5 +1,6 @@
 import { WordlePoints } from "../../ws/services/WordleService.ts";
 
+
 export class Player {
 	readonly uuid: string = '';
 
@@ -9,6 +10,9 @@ export class Player {
 
 	isPlayingThisMatch = false;
 
+	disconnectedTimeout: number | undefined = undefined;
+
+
 	constructor(public name: string, readonly connectionTimestamp: number, uuid?: string) {
 		this.uuid = uuid || crypto.randomUUID();
 
@@ -17,6 +21,7 @@ export class Player {
 
 		this.reset();
 	}
+
 
 	addWord(word: string, result: WordlePoints[]): void {
 		this.wordTries = [
@@ -35,9 +40,11 @@ export class Player {
 		});
 	}
 
+
 	getKnownLetters(): Array<WordlePoints | null> {
 		return this.knownLetters;
 	}
+
 
 	reset(): void {
 		this.wordTries = [];

@@ -49,13 +49,47 @@ export class Room {
 	}
 
 
-	removePlayer(playerUuid: string): void {
-		// for (const existingPlayer of this.players) {
-		// 	if (existingPlayer.name === player.name) {
-		// 		// TODO: Remove player
-		// 	}
-		// }
-		this.players = this.players.filter((existingPlayer) => existingPlayer.uuid !== playerUuid);
+	queuePlayerRemoval(playerUuid: string, timeToTimeout: number, removePlayerAction: (player: Player) => void): void {
+		const disconnectedPlayer = this.findPlayer(playerUuid);
+
+		if (!disconnectedPlayer) {
+			console.error('No player to disconnect');
+			return;
+		}
+
+		const fn = () => {
+			if (disconnectedPlayer && disconnectedPlayer.disconnectedTimeout) {
+				removePlayerAction(disconnectedPlayer);
+
+				this.removePlayer(disconnectedPlayer);
+			}
+		};
+
+		disconnectedPlayer.disconnectedTimeout = setTimeout(fn, timeToTimeout);
+	}
+
+
+	removePlayer(player: Player): void {
+		this.players = this.players.filter((currentPlayer) => currentPlayer.uuid !== player.uuid);
+	}
+
+
+	reconnectPlayer(playerUuid: string): boolean {
+		const player = this.players.find((player) => player.uuid === playerUuid);
+
+		if (!player) {
+			console.error(`Trying to reconnect invalid player uuid: ${playerUuid}`);
+			return false;
+		}
+
+		if (player.disconnectedTimeout) {
+			clearTimeout(player.disconnectedTimeout);
+			player.disconnectedTimeout = undefined;
+
+			console.log(`Player [${playerUuid}] reconnected correctly`);
+		}
+
+		return true;
 	}
 
 
@@ -69,7 +103,6 @@ export class Room {
 			player.reset();
 			player.isPlayingThisMatch = true;
 		});
-
 	}
 
 

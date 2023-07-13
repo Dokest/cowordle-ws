@@ -1,8 +1,9 @@
 import { load } from "https://deno.land/std/dotenv/mod.ts";
-import { ConnInfo, serve } from "https://deno.land/std@0.178.0/http/server.ts";
-import { SocketServer } from "../../dependencies/socketio.deps.ts";
+import { SocketServer, createServer, express } from "../../dependencies/socketio.deps.ts";
 import { checkLostMatch } from "../actions/CheckLostMatch.ts";
 import { createRoom } from "../actions/CreateRoom.ts";
+import { disconnectPlayer } from "../actions/DisconnectPlayer.ts";
+import { reconnectPlayer } from "../actions/ReconnectPlayer.ts";
 import { extractSocketData } from "../actions/SocketData.ts";
 import { Database } from "../database/Database.ts";
 import { Room } from "../database/models/Room.ts";
@@ -10,7 +11,9 @@ import { SetupService } from "../ws/services/SetupService.ts";
 import { WordlePoints, validateWord } from "../ws/services/WordleService.ts";
 
 
-const configData = await load({ export: true });
+const START_MATCH_DELAY = 4000;
+
+await load({ export: true });
 const webappPort = parseInt(Deno.env.get("WEBAPP_PORT") || '');
 const externalWebappDomain = Deno.env.get("WEBAPP_EXTERNAL_URL");
 
@@ -22,16 +25,27 @@ if (externalWebappDomain) {
 	corsAllowedDomains.push(externalWebappDomain);
 }
 
-const START_MATCH_DELAY = 4000;
+console.log(corsAllowedDomains);
 
-const io = new SocketServer({
+const app = express();
+const server = createServer(app);
+const io = new SocketServer(server, {
+	connectionStateRecovery: {},
 	cors: {
 		origin: corsAllowedDomains,
 		methods: ["GET", "POST", "OPTIONS"],
 		credentials: true,
 	},
-});
+	// deno-lint-ignore no-explicit-any
+} as any);
 
+// const io = new SocketServer({
+// 	cors: {
+// 		origin: corsAllowedDomains,
+// 		methods: ["GET", "POST", "OPTIONS"],
+// 		credentials: true,
+// 	},
+// });
 
 export function generateString(length: number): string {
 	return (+new Date * Math.random()).toString(36).substring(0, length).toUpperCase();
@@ -43,80 +57,47 @@ io.on('connect_error', (err) => {
 });
 
 io.on('connection', (socket) => {
-	console.log(`New connection:`, socket.id);
+	console.log(`New connection: ${socket.id}. Recovering state: ${socket.recovered} with ${JSON.stringify(socket.data)}`);
 
-	socket.on('disconnect', (reason) => {
-		console.log('> Before disconnect', reason);
-
+	if (socket.recovered) {
 		const socketData = extractSocketData(socket.data);
 
-		if (!socketData) {
-			return;
-		}
-
-		console.log(`Player [${socketData.playerUuid}] disconnected. Reason: ${JSON.stringify(reason)}`);
-
-		// Cleanup socket data, as is no longer in use
-		socket.data = {};
-
-		const room = database.getRoom(socketData.roomCode);
-
-		if (!room) {
-			return;
-		}
-
-		room.removePlayer(socketData.playerUuid);
-
-		if (room.getPlayers().length === 0) {
-			database.destroyRoom(socketData.roomCode);
-
-			console.log(`Destroying room [${socketData.roomCode}] as is empty`);
-
-			return;
-		}
-
-		// Migrate host
-		const hostUuid = room.getHost()?.uuid;
-
-		if (hostUuid === socketData.playerUuid) {
-			console.log(`Migrating host for room ${socketData.roomCode}.`);
-
-			const newHost = room.getPlayers().at(0)!;
-
-			room.setHost(newHost);
-
-			io.to(socketData.roomCode).emit('change_host', {
-				hostUuid: newHost.uuid,
-			});
-
-			console.log(`Migrated host for room ${socketData.roomCode} from [${hostUuid}] to [${newHost.uuid}].`);
-		}
-
-		io.to(socketData.roomCode).emit('player_disconnected', {
-			playerUuid: socketData.playerUuid,
-			reason: 'disconnected',
+		reconnectPlayer(database, socket, io, {
+			playerUuid: socketData?.playerUuid,
+			roomCode: socketData?.roomCode,
 		});
-	})
+	}
 
-	socket.on('message', (data) => {
-		console.log('Message received:', data);
-
-		socket.emit('message', `Server replies: ${data}`);
+	socket.on('disconnect', (reason) => {
+		disconnectPlayer(database, reason, socket, io);
 	});
 
 	socket.on('heartbeat_keepalive', () => {
 		socket.emit('heartbeat_keepalive');
 	});
 
-	socket.on('setup', async (setupData: { roomCode: string; playerName: string; }) => {
-		console.log('> Before SETUP');
+	socket.on('setup', async (setupData: { roomCode: string; playerName: string; lastPlayerUuid: string }) => {
+		let hasReconnected = false;
 
-		await setupService.connectToRoom(socket, setupData.roomCode, setupData.playerName);
+		if (setupData.lastPlayerUuid) {
+			// Try to reconnect player
+			hasReconnected = reconnectPlayer(database, socket, io, {
+				playerUuid: setupData.lastPlayerUuid,
+				roomCode: setupData.roomCode,
+			});
+		}
+
+		const reusePlayerUuid = hasReconnected
+			? setupData.lastPlayerUuid
+			: undefined;
+
+		// Create new player in room
+		await setupService.connectToRoom(socket, setupData.roomCode, setupData.playerName, reusePlayerUuid);
+
+		console.log(`Setup: Player [${setupData.playerName}] reconnection [${hasReconnected}]`);
 	});
 
 	socket.on('update_player_name', (playerData: { uuid: string; roomCode: string; newPlayerName: string }) => {
-		console.log('> Before update_player_name', playerData);
-
 		const player = database.getRoom(playerData.roomCode)?.getPlayers().find((player) => player.uuid === playerData.uuid);
 
 		if (player) {
@@ -130,8 +111,6 @@ io.on('connection', (socket) => {
 	});
 
 	socket.on('remove_player', (playerData: { roomCode: string, targetPlayerUuid: string, requestingPlayerUuid: string }) => {
-		console.log('> Before remove_player', playerData);
-
 		const removed = setupService.removePlayer(playerData.roomCode, playerData.targetPlayerUuid, playerData.requestingPlayerUuid);
 
 		if (removed) {
@@ -143,8 +122,6 @@ io.on('connection', (socket) => {
 	});
 
 	socket.on('validate_word', (inputs: { word: string }) => {
-		console.log('> Before validate_word', inputs);
-
 		const { word } = inputs;
 		const socketData = extractSocketData(socket.data);
 
@@ -166,7 +143,7 @@ io.on('connection', (socket) => {
 			return;
 		}
 
-		const player = room.getPlayers().find((player) => player.uuid === playerUuid);
+		const player = room.findPlayer(playerUuid);
 
 		if (!player) {
 			console.error('[validate_word] Invalid player uuid');
@@ -217,8 +194,6 @@ io.on('connection', (socket) => {
 	});
 
 	socket.on('start_game', (inputs: { wordListId: string }) => {
-		console.log('> Before start_game', inputs);
-
 		const socketData = extractSocketData(socket.data);
 
 		if (!socketData) {
@@ -268,40 +243,53 @@ const database = new Database();
 
 const setupService = new SetupService(io, database);
 
-const routes: Record<string, (request: Request) => Response | Promise<Response>> = {
-	'/create-room': () => {
-		const code = generateString(6);
+// const routes: Record<string, (request: Request) => Response | Promise<Response>> = {
+// 	'/create-room': () => {
+// 		const code = generateString(6);
 
-		console.log('Creating new room with CODE: ', code);
+// 		console.log('Creating new room with CODE: ', code);
 
-		return createRoom(code, setupService);
-	},
-	'/testing/solution': async (request: Request): Promise<Response> => {
-		console.log(request);
+// 		return createRoom(code, setupService);
+// 	},
+// 	'/testing/solution': async (request: Request): Promise<Response> => {
+// 		console.log(request);
 
-		const req = await request.json();
+// 		const req = await request.json();
 
-		const roomCode = req.roomCode;
+// 		const roomCode = req.roomCode;
 
-		const room = database.getRoom(roomCode);
+// 		const room = database.getRoom(roomCode);
 
-		return Response.json({
-			solution: room?.getSolution(),
-		});
-	},
-}
+// 		return Response.json({
+// 			solution: room?.getSolution(),
+// 		});
+// 	},
+// }
 
-async function handle(request: Request, info: ConnInfo): Promise<Response> {
-	const url = new URLPattern(request.url);
+// async function handle(request: Request, info: ConnInfo): Promise<Response> {
+// 	const url = new URLPattern(request.url);
 
-	if (url.pathname in routes) {
-		return routes[url.pathname](request);
-	}
+// 	if (url.pathname in routes) {
+// 		return routes[url.pathname](request);
+// 	}
 
-	return io.handler()(request, info);
-}
+// 	return io.handler()(request, info);
+// }
 
-await serve(handle, {
-	port: parseInt(configData["WS_PORT"]),
+// await serve(handle, {
+// 	port: parseInt(configData["WS_PORT"]),
+// });
+
+app.get("/create-room", (req, res) => {
+	const code = generateString(6);
+
+	console.log('Creating new room with CODE: ', code);
+
+	res.send(createRoom(code, setupService));
 });
 
+const port = Deno.env.has("WS_PORT") ? Deno.env.get("WS_PORT") : 9000;
+
+server.listen(port, () => {
+	console.log(`Listening on port: ${port}`);
+});

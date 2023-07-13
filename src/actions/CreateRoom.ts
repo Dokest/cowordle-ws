@@ -1,11 +1,11 @@
 import { SetupService } from "../ws/services/SetupService.ts";
 
 
-export function createRoom(roomCode: string, setupService: SetupService): Response {
+export function createRoom(roomCode: string, setupService: SetupService): unknown {
 	if (typeof roomCode !== 'string') {
-		return Response.json({
+		return {
 			error: 'invalid-argument-code',
-		});
+		};
 	}
 
 	const created = setupService.createRoom(roomCode);
@@ -13,16 +13,14 @@ export function createRoom(roomCode: string, setupService: SetupService): Respon
 	console.log('ROOM CREATED: ', !!created);
 
 	if (!created) {
-		return Response.json({
-			error: {}
-		}, {
-			status: 500,
-		});
+		return {
+			error: {},
+		};
 	}
 
-	return Response.json({
+	return {
 		data: {
 			code: roomCode,
 		},
-	});
+	};
 }

@@ -33,6 +33,8 @@ export class Database {
 			return false;
 		}
 
-		return this.rooms.delete(roomCode);
+		this.rooms.delete(roomCode);
+
+		return true;
 	}
 }
